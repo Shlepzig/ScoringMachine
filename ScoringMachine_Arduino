@@ -1,0 +1,131 @@
+//setting up global variables
+ 
+const int FotrA = A0;      // Fencer on the Right Line A,B,C
+const int FotrB = A1;      //
+const int FotrC = A2;      //
+const int FotlA = A3;      // Fencer on the Left Line A,B,C
+const int FotlB = A4;      //
+const int FotlC = A5;      //
+ 
+const int MenuButton = 12;        // menu button for interaction with server
+const int SelectButton = 13;      //select button for interaction with server
+ 
+bool action = false;           //Listens for stop in the action
+                               //will write various events: line high line low to the serial port
+bool TouchRight = false;       //listen for right touch
+bool TouchLeft = false;        //listens for touch left
+ 
+ 
+//timer variables
+unsigned long time;            //Records time in micros for calculation
+unsigned long Debounce;       //debounce time in micros
+unsigned long Lockout;        //Lockout time
+unsigned long Whipover;       //Whipover time for sabre only
+unsigned long rollover = 4294967295; //this is the maximum number reportable by micros
+unsigned long gap;            //this is the potential gap during the readings
+ 
+void setup(){
+  Serial.begin(192600); //serial has to be fast to listen to micros
+ 
+}
+ 
+void loop(){
+//menu and select loop
+ 
+        //Listen to serial
+        //set variables for weapon
+Set weapon = serialRead();
+ 
+//Initiate weapon routine
+If weapon = “epee” then epeeSetup() endif;
+ 
+//in between touches Listen for start from server
+serialRead();
+ 
+// on a start event
+ 
+//start routine based on weapon loop
+If weapon = “epee” then epeeLoop() endif;
+If weapon = “foil” then foilLoop() endif;
+If weapon = “sabre” then sabreLoop() endif;
+ 
+}
+ 
+void epeeSetup () {
+//set variables for epee
+ 
+//set all the pins to the right levels and input/output states
+pinMode(pin, INPUT);                   // set pin to input
+digitalWrite(pin, HIGH);               // turn on pullup resistors
+ 
+//set all variables for epee
+unsigned long Debounce = 2000;      //debounce time = 2 ms
+unsigned long Lockout = 40000;      //Lockout time = 40 ms
+unsigned long Whipover = 0;         //no whipover rules for epee
+ 
+//end of epee setup
+};
+ 
+// following sections will have loops for other weapons and an open version which will gather training modes pushed down from the server.
+ 
+//This section has the weapons loops which run while looking for a touch and write to the serial port any events
+ 
+void epeeLoop () {;                   // The operations loops are the heart of the operations.
+//run loop while looking for touch
+Set action == false;                  //starting off with no touch
+Set FotrA.LastState == FotrA          //setting state to low
+ 
+Set Fotr.Debounce = 0;                //set Fotr debounce timer to 0
+Set Fotl.Debounce = 0;                //set Fotl debounce timer to 0
+Set event.Lockout = 0;                //set lockout to 0 indicating no countdown
+ 
+ 
+While action == false (;              //touch will be set to true as soon as an event has occurred
+ 
+        //at the beginning of the loop check for clock-rollover, and event times if needed
+        If micros < time then (;       //the current time is less than the last then rollover is true
+                                      //check to see if any events are greater than the rollover
+                                      // this could be done during the check routine
+ 
+        Time = micros;                 //read the current time in micros
+ 
+ 
+        If FotrA.LastState != analogRead(FotrA) then //check for line events at the current time
+                                              // basically all events will get checked against the current time-stamp
+ 
+//there has been an event so check what sort of event.
+//Figure out how to make this an independent subroutine to re-use as much as possible
+//something like checkline(line) time and states will be global
+ 
+               If FotrA.LastState < analogRead(FotrA)(; //differentiate states high/low
+ 
+                                                     //check for valid and non-valid by weapon
+ 
+                       then (set Fotr.State == true;                 //if high then state is true
+                               set Fotr.Debounce = time + Debounce; //set the debounce timer
+                               serialWrite (time);                   //send the time event to the server
+                              serialWrite (“.Fotr.ValidHigh”);      //Indicate High
+ 
+                       Else (set. Fotr.State == false;               //tip is no longer depressed
+                               Set Fotr.Debounce = 0);               //reset the debounce timer
+                               serialWrite (time);                   //write the event to the server
+                               serialWrite (“Fotr.ValidLow”)
+                       Endif);                                       //end high/low routine
+ 
+               Else (;                                               //if no event check for debounce and lockout
+ 
+               If time > Fotr.Debounce then                          //Debounce has been cleared
+                       Then                   //as soon as Debounce is clear check lockout timer
+                                              //if lockout timer has a value, you are waiting do not over-write
+ 
+                               If event.Lockout = 0 then (set Event.Lockout = time + lockout);
+       
+                       serialWrite (time);                           //write out event to server
+                       serialWrite (“.Fotr.Valid”);
+ 
+        //check Fotl same as Fotr
+ 
+        If time > Event.Lockout set touch = true;                    //a touch event has occurred
+               serialWrite (time);                                   // write event
+               serialWrite (“.Touch”);                               //
+               action == true;                                       //end loop
